@@ -14,28 +14,32 @@ public class BookSellerAgent extends Agent {
     protected void setup() {
         var args = ((String) getArguments()[0]).split(",");
 
-        for (String bookName : args
-        ) {
+        for (String bookName : args) {
             catalogue.put(bookName.trim(), 10);
         }
-        // Register the book-selling service in the yellow pages
-        DFAgentDescription dfd = new DFAgentDescription();
-        dfd.setName(getAID());
-        ServiceDescription sd = new ServiceDescription();
-        sd.setType("book-selling");
-        sd.setName("JADE-book-trading");
-        dfd.addServices(sd);
-        try {
-            DFService.register(this, dfd);
-        } catch (FIPAException fe) {
-            fe.printStackTrace();
-        }
+
+        register();
 
         // Add the behaviour serving queries from buyer agents
         addBehaviour(new BookSellerOfferRequestsServer());
 
         // Add the behaviour serving purchase orders from buyer agents
         addBehaviour(new BookSellerPurchaseOrdersServer());
+    }
+
+    // Register the book-selling service in the yellow pages
+    private void register() {
+        DFAgentDescription dfd = new DFAgentDescription();
+        dfd.setName(getAID());
+        ServiceDescription sd = new ServiceDescription();
+        sd.setType("book-selling");
+        sd.setName(getAID().getName());
+        dfd.addServices(sd);
+        try {
+            DFService.register(this, dfd);
+        } catch (FIPAException fe) {
+            fe.printStackTrace();
+        }
     }
 
     protected void takeDown() {
