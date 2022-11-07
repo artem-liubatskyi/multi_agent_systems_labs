@@ -39,7 +39,6 @@ public class BookBuyerAgent extends Agent {
     }
 
     private class BookBuyerRequestPerformer extends RequestPerformer {
-
         protected AID[] getSellerAgents() {
             return sellerAgents;
         }

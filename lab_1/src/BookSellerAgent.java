@@ -54,14 +54,12 @@ public class BookSellerAgent extends Agent {
     }
 
     private class BookSellerOfferRequestsServer extends OfferRequestsServer {
-
         public Integer getBookPriceByTitle(String title) {
             return getBookPrice(title);
         }
     }
 
     private class BookSellerPurchaseOrdersServer extends PurchaseOrdersServer {
-
         public Integer getBookPriceByTitle(String title) {
             return getBookPrice(title);
         }
