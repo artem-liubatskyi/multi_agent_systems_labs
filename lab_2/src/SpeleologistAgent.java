@@ -17,8 +17,23 @@ public class SpeleologistAgent extends Agent {
     private AID Navigator;
 
     protected void setup() {
+        this.register();
         addBehaviour(new EnvironmentFinder());
         addBehaviour(new NavigatorFinder());
+    }
+
+    private void register() {
+        DFAgentDescription dfd = new DFAgentDescription();
+        dfd.setName(getAID());
+        ServiceDescription sd = new ServiceDescription();
+        sd.setType(Constants.SPELEOLOGIST_AGENT_TYPE);
+        sd.setName(Constants.SPELEOLOGIST_AGENT_TYPE);
+        dfd.addServices(sd);
+        try {
+            DFService.register(this, dfd);
+        } catch (FIPAException fe) {
+            fe.printStackTrace();
+        }
     }
 
     private class EnvironmentFinder extends Behaviour {
@@ -93,6 +108,11 @@ public class SpeleologistAgent extends Agent {
                 case RequestEnvironmentState:
                     System.out.println("Requesting environment state");
                     environmentStateReplyTemplate = requestEnvironmentState();
+                    try {
+                        Thread.sleep(3000);
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
                     step = SpeleologistCycleSteps.ReceiveEnvironmentStateResponse;
                     break;
                 case ReceiveEnvironmentStateResponse:

@@ -1,4 +1,6 @@
+import jade.core.AID;
 import jade.core.Agent;
+import jade.core.behaviours.Behaviour;
 import jade.core.behaviours.CyclicBehaviour;
 import jade.domain.DFService;
 import jade.domain.FIPAAgentManagement.DFAgentDescription;
@@ -10,10 +12,12 @@ import models.SpeleologistActions;
 import utils.Constants;
 
 public class NavigatorAgent extends Agent {
+    private AID Speleologist;
 
     protected void setup() {
         this.register();
         addBehaviour(new RequestsServer());
+        addBehaviour(new SpeleologistFinder());
     }
 
     private void register() {
@@ -30,8 +34,31 @@ public class NavigatorAgent extends Agent {
         }
     }
 
-    protected void takeDown() {
+    private class SpeleologistFinder extends Behaviour {
+        public void action() {
+            DFAgentDescription template = new DFAgentDescription();
+            ServiceDescription sd = new ServiceDescription();
+            sd.setType(Constants.SPELEOLOGIST_AGENT_TYPE);
+            template.addServices(sd);
+            try {
+                DFAgentDescription[] result = DFService.search(myAgent, template);
+                if (result != null && result.length > 0) {
+                    Speleologist = result[0].getName();
+                } else {
+                    try {
+                        Thread.sleep(2000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            } catch (FIPAException e) {
+                e.printStackTrace();
+            }
+        }
 
+        public boolean done() {
+            return Speleologist != null;
+        }
     }
 
     private class RequestsServer extends CyclicBehaviour {
@@ -41,6 +68,7 @@ public class NavigatorAgent extends Agent {
             ACLMessage msg = myAgent.receive(mt);
             if (msg != null) {
                 ACLMessage message = new ACLMessage(ACLMessage.CFP);
+                message.addReceiver(Speleologist);
                 message.setConversationId(Constants.ENVIRONMENT_STATE_NOTIFICATION_CONVERSATION_ID);
                 message.setContent(String.valueOf(SpeleologistActions.GrabGold));
                 message.setReplyWith("cfp" + System.currentTimeMillis());
