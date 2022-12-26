@@ -7,7 +7,6 @@ import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.domain.FIPAException;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
-import models.LabyrinthCellDescriptor;
 import models.SpeleologistActions;
 import models.SpeleologistCycleSteps;
 import utils.Constants;
@@ -99,11 +98,11 @@ public class SpeleologistAgent extends Agent {
         private MessageTemplate environmentStateReplyTemplate;
         private MessageTemplate navigatorReplyTemplate;
         private MessageTemplate actionReplyTemplate;
-        private LabyrinthCellDescriptor environmentState;
+        private String environmentState;
         private SpeleologistActions action;
         private SpeleologistCycleSteps step = SpeleologistCycleSteps.RequestEnvironmentState;
-        public void action() {
 
+        public void action() {
             switch (step) {
                 case RequestEnvironmentState:
                     System.out.println("Requesting environment state");
@@ -119,10 +118,10 @@ public class SpeleologistAgent extends Agent {
                     ACLMessage environmentReply = myAgent.receive(environmentStateReplyTemplate);
                     if (environmentReply != null) {
                         if (environmentReply.getPerformative() == ACLMessage.INFORM) {
-                            environmentState = LabyrinthCellDescriptor.valueOf(environmentReply.getContent());
-                            System.out.println(String.format("Environment state received: %state",environmentState));
+                            environmentState = environmentReply.getContent();
+                            System.out.println(String.format("Environment state received: %s", environmentState));
+                            step = SpeleologistCycleSteps.NotifyNavigatorAboutEnvironmentState;
                         }
-                        step = SpeleologistCycleSteps.NotifyNavigatorAboutEnvironmentState;
                     } else {
                         block();
                     }
@@ -137,9 +136,9 @@ public class SpeleologistAgent extends Agent {
                     if (navigatorReply != null) {
                         if (navigatorReply.getPerformative() == ACLMessage.PROPOSE) {
                             action = SpeleologistActions.valueOf(navigatorReply.getContent());
-                            System.out.println(String.format("Received next action from navigator: %state", action));
+                            System.out.println(String.format("Received next action from navigator: %s", action));
+                            step = SpeleologistCycleSteps.SendActionToEnvironment;
                         }
-                        step = SpeleologistCycleSteps.SendActionToEnvironment;
                     } else {
                         block();
                     }
@@ -163,27 +162,29 @@ public class SpeleologistAgent extends Agent {
             }
         }
 
-        private  MessageTemplate requestEnvironmentState() {
+        private MessageTemplate requestEnvironmentState() {
             ACLMessage message = new ACLMessage(ACLMessage.REQUEST);
             message.addReceiver(Environment);
             message.setConversationId(Constants.ENVIRONMENT_STATE_REQUEST_CONVERSATION_ID);
             message.setReplyWith("request" + System.currentTimeMillis());
             myAgent.send(message);
 
-            return  MessageTemplate.and(MessageTemplate.MatchConversationId(Constants.ENVIRONMENT_STATE_REQUEST_CONVERSATION_ID),
+            return MessageTemplate.and(
+                    MessageTemplate.MatchConversationId(Constants.ENVIRONMENT_STATE_REQUEST_CONVERSATION_ID),
                     MessageTemplate.MatchPerformative(ACLMessage.INFORM));
         }
 
-        private MessageTemplate sendEnvironmentStateToNavigator(LabyrinthCellDescriptor state) {
+        private MessageTemplate sendEnvironmentStateToNavigator(String state) {
             ACLMessage message = new ACLMessage(ACLMessage.CFP);
             message.addReceiver(Navigator);
-            message.setContent(String.valueOf(state));
+            message.setContent(state);
             message.setConversationId(Constants.ENVIRONMENT_STATE_NOTIFICATION_CONVERSATION_ID);
             message.setReplyWith("cfp" + System.currentTimeMillis());
             myAgent.send(message);
 
-            return  MessageTemplate.and(MessageTemplate.MatchConversationId(Constants.ENVIRONMENT_STATE_NOTIFICATION_CONVERSATION_ID),
-                    MessageTemplate.MatchInReplyTo(message.getReplyWith()));
+            return MessageTemplate.and(
+                    MessageTemplate.MatchConversationId(Constants.ENVIRONMENT_STATE_NOTIFICATION_CONVERSATION_ID),
+                    MessageTemplate.MatchPerformative(ACLMessage.PROPOSE));
         }
 
         private MessageTemplate sendAction(SpeleologistActions action) {
@@ -194,13 +195,22 @@ public class SpeleologistAgent extends Agent {
             message.setReplyWith("cfp" + System.currentTimeMillis());
             myAgent.send(message);
 
-            return  MessageTemplate.and(MessageTemplate.MatchConversationId(Constants.ENVIRONMENT_ACTION_CONVERSATION_ID),
-                    MessageTemplate.MatchInReplyTo(message.getReplyWith()));
+            return MessageTemplate.and(
+                    MessageTemplate.MatchConversationId(Constants.ENVIRONMENT_ACTION_CONVERSATION_ID),
+                    MessageTemplate.MatchPerformative(ACLMessage.ACCEPT_PROPOSAL));
         }
 
         public boolean done() {
-            return environmentState == LabyrinthCellDescriptor.Wumpus || environmentState == LabyrinthCellDescriptor.Glitch;
+            return action == SpeleologistActions.GrabGold;
         }
     }
 
+    protected void takeDown() {
+        try {
+            DFService.deregister(this);
+        } catch (FIPAException fe) {
+            fe.printStackTrace();
+        }
+        System.out.println(getAID().getName() + " terminating.");
+    }
 }

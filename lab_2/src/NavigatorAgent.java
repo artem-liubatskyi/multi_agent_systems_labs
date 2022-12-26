@@ -62,20 +62,46 @@ public class NavigatorAgent extends Agent {
     }
 
     private class RequestsServer extends CyclicBehaviour {
+        private int index = 0;
+        private SpeleologistActions[] actions = new SpeleologistActions[] {
+                SpeleologistActions.TurnRight,
+                SpeleologistActions.Move,
+                SpeleologistActions.TurnLeft,
+                SpeleologistActions.Move,
+                SpeleologistActions.Move,
+                SpeleologistActions.GrabGold
+        };
+
         public void action() {
-            MessageTemplate mt =MessageTemplate.and(MessageTemplate.MatchConversationId(Constants.ENVIRONMENT_STATE_NOTIFICATION_CONVERSATION_ID),
+            MessageTemplate mt = MessageTemplate.and(
+                    MessageTemplate.MatchConversationId(Constants.ENVIRONMENT_STATE_NOTIFICATION_CONVERSATION_ID),
                     MessageTemplate.MatchPerformative(ACLMessage.CFP));
             ACLMessage msg = myAgent.receive(mt);
             if (msg != null) {
-                ACLMessage message = new ACLMessage(ACLMessage.CFP);
+                ACLMessage message = new ACLMessage(ACLMessage.PROPOSE);
                 message.addReceiver(Speleologist);
                 message.setConversationId(Constants.ENVIRONMENT_STATE_NOTIFICATION_CONVERSATION_ID);
-                message.setContent(String.valueOf(SpeleologistActions.GrabGold));
-                message.setReplyWith("cfp" + System.currentTimeMillis());
+                message.setContent(String.valueOf(defineAction(null)));
+                message.setReplyWith("PROPOSE" + System.currentTimeMillis());
+                index++;
                 myAgent.send(message);
             } else {
                 block();
             }
         }
+
+        private SpeleologistActions defineAction(String state) {
+            return actions[index];
+        }
+
+    }
+
+    protected void takeDown() {
+        try {
+            DFService.deregister(this);
+        } catch (FIPAException fe) {
+            fe.printStackTrace();
+        }
+        System.out.println(getAID().getName() + " terminating.");
     }
 }

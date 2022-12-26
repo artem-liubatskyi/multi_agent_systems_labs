@@ -28,26 +28,58 @@ public class Labyrinth {
         Rooms[3][3] = new LabyrinthCell(new LabyrinthCellDescriptor[] {LabyrinthCellDescriptor.Pit});
     }
 
-        private int[] GetHeroCoords(){
-            for(int i =0; i<4;i++){
-                for(int j =0; j<4;j++){
-                    if(Arrays.stream(Rooms[i][j].Descriptors).allMatch(x->x ==LabyrinthCellDescriptor.Hero)){
-                        return new int[]{i,j};
-                    }
+   private int[] GetHeroCoords(){
+        for(int i =0; i<4;i++){
+            for(int j =0; j<4;j++){
+                if(Rooms[i][j].Descriptors.contains(LabyrinthCellDescriptor.Hero)){
+                    System.out.println(String.format("Hero coords: %s, %d", i,j));
+                    return new int[]{i,j};
+
                 }
             }
-            return new int[]{};
         }
+        return new int[]{};
+   }
+
+   public void ResolveHeroAction(SpeleologistActions action){
+        if(action==SpeleologistActions.TurnRight ||action==SpeleologistActions.TurnLeft){
+            UpdateHeroDirection(action);
+        } else if(action==SpeleologistActions.Move){
+            MoveHero();
+        }
+   }
 
     public List<LabyrinthCellDescriptor> GetHeroRoomState(){
-        var heroCoords =GetHeroCoords();
+        var heroCoords = GetHeroCoords();
 
-       return Arrays.stream(Rooms[heroCoords[0]][heroCoords[1]].Descriptors).filter(x->x!=LabyrinthCellDescriptor.Hero).toList();
+       return Rooms[heroCoords[0]][heroCoords[1]].Descriptors.stream().filter(x->x!=LabyrinthCellDescriptor.Hero).toList();
     }
 
-    public void UpdateHeroDirection(Direction direction){
-        Hero.Direction = direction;
+    public void UpdateHeroDirection(SpeleologistActions action){
+        var currentDirection = directionsMap.indexOf(Hero.Direction);
+        var updatedIndex = currentDirection;
+        if(action==SpeleologistActions.TurnLeft){
+            updatedIndex = currentDirection - 1;
+            if(updatedIndex<0){
+                updatedIndex = 3;
+            }
+        } else if(action==SpeleologistActions.TurnRight){
+            updatedIndex = currentDirection + 1;
+            if(updatedIndex>3){
+                updatedIndex = 0;
+            }
+        }
+        Hero.Direction = directionsMap.get(updatedIndex);
     }
+
+    ArrayList<Direction> directionsMap = new ArrayList<>(){
+        {
+            add(Direction.Up);
+            add(Direction.Down);
+            add(Direction.Left);
+            add(Direction.Right);
+        }
+    };
 
     public LabyrinthCell MoveHero(){
         var heroCoords = GetHeroCoords();
@@ -73,10 +105,9 @@ public class Labyrinth {
             return null;
         }
 
-        Rooms[updatedCoords[0]][updatedCoords[1]].Descriptors =(LabyrinthCellDescriptor[]) Stream.concat(Arrays.stream(Rooms[updatedCoords[0]][updatedCoords[1]].Descriptors),
-                Arrays.stream(new LabyrinthCellDescriptor[]{LabyrinthCellDescriptor.Hero})).toArray();
+        Rooms[updatedCoords[0]][updatedCoords[1]].Descriptors.add(LabyrinthCellDescriptor.Hero);
 
-        Rooms[heroCoords[0]][heroCoords[1]].Descriptors =(LabyrinthCellDescriptor[]) Arrays.stream(Rooms[heroCoords[0]][heroCoords[1]].Descriptors).filter(x->x!=LabyrinthCellDescriptor.Hero).toArray();
+        Rooms[heroCoords[0]][heroCoords[1]].Descriptors = Rooms[heroCoords[0]][heroCoords[1]].Descriptors.stream().filter(x->x!=LabyrinthCellDescriptor.Hero).toList();
 
         return Rooms[updatedCoords[0]][updatedCoords[1]];
     }
@@ -84,16 +115,16 @@ public class Labyrinth {
     public boolean IsHeroDead(){
         var heroCoords =GetHeroCoords();
 
-        return Arrays.stream(Rooms[heroCoords[0]][heroCoords[1]].Descriptors).anyMatch(x -> x != LabyrinthCellDescriptor.Hero) &&
-                Arrays.stream(Rooms[heroCoords[0]][heroCoords[1]].Descriptors).anyMatch(x -> x != LabyrinthCellDescriptor.Wumpus);
+        return Rooms[heroCoords[0]][heroCoords[1]].Descriptors.contains(LabyrinthCellDescriptor.Hero) &&
+                Rooms[heroCoords[0]][heroCoords[1]].Descriptors.contains(LabyrinthCellDescriptor.Wumpus);
 
     }
 
     public boolean IsWin(){
         var heroCoords =GetHeroCoords();
 
-        return Arrays.stream(Rooms[heroCoords[0]][heroCoords[1]].Descriptors).anyMatch(x -> x != LabyrinthCellDescriptor.Hero) &&
-                Arrays.stream(Rooms[heroCoords[0]][heroCoords[1]].Descriptors).anyMatch(x -> x != LabyrinthCellDescriptor.Glitch);
+        return Rooms[heroCoords[0]][heroCoords[1]].Descriptors.contains(LabyrinthCellDescriptor.Hero) &&
+                Rooms[heroCoords[0]][heroCoords[1]].Descriptors.contains(LabyrinthCellDescriptor.Glitch);
 
     }
 }

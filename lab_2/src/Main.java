@@ -8,9 +8,8 @@ public class Main {
                 new AgentCreateParam("NavigatorAgent", null, 1),
                 new AgentCreateParam("SpeleologistAgent", null, 1),
         };
-        String[] jadeArgs = {"-gui", "-agents", AgentArgumentsBuilder.build(agentNames)};
+        String[] jadeArgs = { "-gui", "-agents", AgentArgumentsBuilder.build(agentNames) };
         jade.Boot.main(jadeArgs);
     }
-
 
 }
