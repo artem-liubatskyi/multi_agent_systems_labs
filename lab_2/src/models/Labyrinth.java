@@ -1,9 +1,6 @@
 package models;
-
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Stream;
 
 public class Labyrinth {
     private Hero Hero = new Hero();
@@ -32,9 +29,7 @@ public class Labyrinth {
         for(int i =0; i<4;i++){
             for(int j =0; j<4;j++){
                 if(Rooms[i][j].Descriptors.contains(LabyrinthCellDescriptor.Hero)){
-                    System.out.println(String.format("Hero coords: %s, %d", i,j));
                     return new int[]{i,j};
-
                 }
             }
         }

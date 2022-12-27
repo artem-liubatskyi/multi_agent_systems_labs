@@ -1,3 +1,4 @@
+import java.util.*;
 import jade.core.AID;
 import jade.core.Agent;
 import jade.core.behaviours.Behaviour;
@@ -7,6 +8,7 @@ import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.domain.FIPAException;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
+import models.LabyrinthCellDescriptor;
 import models.SpeleologistActions;
 import models.SpeleologistCycleSteps;
 import utils.Constants;
@@ -15,8 +17,31 @@ public class SpeleologistAgent extends Agent {
     private AID Environment;
     private AID Navigator;
 
+    private Map<LabyrinthCellDescriptor, List<String>> StatePhrasesMap = new HashMap<>();
+
     protected void setup() {
         this.register();
+        StatePhrasesMap.put(LabyrinthCellDescriptor.Breeze, new ArrayList<>() {
+            {
+                add("I feel breeze here");
+                add("There is a breeze");
+                add("It’s a cool breeze here");
+            }
+        });
+        StatePhrasesMap.put(LabyrinthCellDescriptor.Stench, new ArrayList<>() {
+            {
+                add("I feel stench here");
+                add("There is a stench");
+                add("It’s a real stench here");
+            }
+        });
+        StatePhrasesMap.put(LabyrinthCellDescriptor.Glitch, new ArrayList<>() {
+            {
+                add("I see glitch here");
+                add("There is a glitch");
+            }
+        });
+
         addBehaviour(new EnvironmentFinder());
         addBehaviour(new NavigatorFinder());
     }
@@ -107,11 +132,6 @@ public class SpeleologistAgent extends Agent {
                 case RequestEnvironmentState:
                     System.out.println("Requesting environment state");
                     environmentStateReplyTemplate = requestEnvironmentState();
-                    try {
-                        Thread.sleep(3000);
-                    } catch (InterruptedException e) {
-                        throw new RuntimeException(e);
-                    }
                     step = SpeleologistCycleSteps.ReceiveEnvironmentStateResponse;
                     break;
                 case ReceiveEnvironmentStateResponse:
@@ -128,7 +148,6 @@ public class SpeleologistAgent extends Agent {
                     break;
                 case NotifyNavigatorAboutEnvironmentState:
                     navigatorReplyTemplate = sendEnvironmentStateToNavigator(environmentState);
-                    System.out.println("Sending environment state to navigator");
                     step = SpeleologistCycleSteps.ReceiveActionFromNavigator;
                     break;
                 case ReceiveActionFromNavigator:
@@ -152,7 +171,7 @@ public class SpeleologistAgent extends Agent {
                     ACLMessage actionAcceptanceReply = myAgent.receive(actionReplyTemplate);
                     if (actionAcceptanceReply != null) {
                         if (actionAcceptanceReply.getPerformative() == ACLMessage.ACCEPT_PROPOSAL) {
-                            System.out.println("Received action acceptance confirmation from environment");
+                            System.out.println("Received action acceptance confirmation from environment \n\n");
                         }
                         step = SpeleologistCycleSteps.RequestEnvironmentState;
                     } else {
@@ -175,9 +194,12 @@ public class SpeleologistAgent extends Agent {
         }
 
         private MessageTemplate sendEnvironmentStateToNavigator(String state) {
+            var parsedStateChunks = ParseEnvironmentState(state);
+            var statePhrase = String.join(".",Arrays.stream(parsedStateChunks).map(x-> StatePhrasesMap.get(x).get(0)).toArray(String[]::new));
+            System.out.println( String.format("Sending environment state to navigator %s", statePhrase));
             ACLMessage message = new ACLMessage(ACLMessage.CFP);
             message.addReceiver(Navigator);
-            message.setContent(state);
+            message.setContent(statePhrase);
             message.setConversationId(Constants.ENVIRONMENT_STATE_NOTIFICATION_CONVERSATION_ID);
             message.setReplyWith("cfp" + System.currentTimeMillis());
             myAgent.send(message);
@@ -198,6 +220,10 @@ public class SpeleologistAgent extends Agent {
             return MessageTemplate.and(
                     MessageTemplate.MatchConversationId(Constants.ENVIRONMENT_ACTION_CONVERSATION_ID),
                     MessageTemplate.MatchPerformative(ACLMessage.ACCEPT_PROPOSAL));
+        }
+
+        private LabyrinthCellDescriptor[] ParseEnvironmentState(String state) {
+            return state.length()> 0 ? Arrays.stream(state.split("[.]")).map(LabyrinthCellDescriptor::valueOf).toArray(LabyrinthCellDescriptor[]::new) : new LabyrinthCellDescriptor[0];
         }
 
         public boolean done() {

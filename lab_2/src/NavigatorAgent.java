@@ -8,8 +8,13 @@ import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.domain.FIPAException;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
+import models.LabyrinthCellDescriptor;
 import models.SpeleologistActions;
 import utils.Constants;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.stream.Stream;
 
 public class NavigatorAgent extends Agent {
     private AID Speleologist;
@@ -63,7 +68,7 @@ public class NavigatorAgent extends Agent {
 
     private class RequestsServer extends CyclicBehaviour {
         private int index = 0;
-        private SpeleologistActions[] actions = new SpeleologistActions[] {
+        private SpeleologistActions[] actions = new SpeleologistActions[]{
                 SpeleologistActions.TurnRight,
                 SpeleologistActions.Move,
                 SpeleologistActions.TurnLeft,
@@ -81,7 +86,7 @@ public class NavigatorAgent extends Agent {
                 ACLMessage message = new ACLMessage(ACLMessage.PROPOSE);
                 message.addReceiver(Speleologist);
                 message.setConversationId(Constants.ENVIRONMENT_STATE_NOTIFICATION_CONVERSATION_ID);
-                message.setContent(String.valueOf(defineAction(null)));
+                message.setContent(String.valueOf(defineAction(msg.getContent())));
                 message.setReplyWith("PROPOSE" + System.currentTimeMillis());
                 index++;
                 myAgent.send(message);
@@ -91,9 +96,29 @@ public class NavigatorAgent extends Agent {
         }
 
         private SpeleologistActions defineAction(String state) {
+            System.out.println(String.format("Navigator received state: %s", state));
+            var parsedDescriptors = ParseEnvironmentState(state);
+            System.out.println(String.format("Navigator parsed state: %s", String.join(",", String.join(";", parsedDescriptors.stream().map(LabyrinthCellDescriptor::name).toArray(String[]::new)))));
             return actions[index];
         }
 
+        private ArrayList<LabyrinthCellDescriptor> ParseEnvironmentState(String state) {
+            if (state == null || state.length() == 0) {
+                return new ArrayList<>();
+            }
+            var parsedDescriptors = new ArrayList<LabyrinthCellDescriptor>();
+            var stateDescriptors = Stream.of(LabyrinthCellDescriptor.values()).map(LabyrinthCellDescriptor::name).toArray(String[]::new);
+            var stateChunks = state.split("[.]");
+
+            for (String chunk : stateChunks) {
+                var parsedDescriptor = Arrays.stream(stateDescriptors).filter(x -> chunk.contains(x.toLowerCase())).findFirst().get();
+                if (parsedDescriptor != null) {
+                    parsedDescriptors.add(LabyrinthCellDescriptor.valueOf(parsedDescriptor));
+                }
+            }
+
+            return parsedDescriptors;
+        }
     }
 
     protected void takeDown() {

@@ -1,6 +1,5 @@
 import java.util.Arrays;
 import java.util.stream.Collectors;
-
 import jade.core.AID;
 import jade.core.Agent;
 import jade.core.behaviours.Behaviour;
@@ -74,9 +73,7 @@ public class EnvironmentAgent extends Agent {
                     MessageTemplate.MatchPerformative(ACLMessage.CFP));
             ACLMessage msg = myAgent.receive(mt);
             if (msg != null) {
-
                 var action = SpeleologistActions.valueOf(msg.getContent());
-
                 Labyrinth.ResolveHeroAction(action);
 
                 ACLMessage message = new ACLMessage(ACLMessage.ACCEPT_PROPOSAL);
@@ -107,9 +104,10 @@ public class EnvironmentAgent extends Agent {
         private void sendEnvironmentStateToSpeleologist() {
             ACLMessage message = new ACLMessage(ACLMessage.INFORM);
             message.addReceiver(Speleologist);
+            var roomState =Labyrinth.GetHeroRoomState();
             String state = Arrays.stream(Labyrinth.GetHeroRoomState().toArray())
                     .map(String::valueOf)
-                    .collect(Collectors.joining(","));
+                    .collect(Collectors.joining("."));
             message.setContent(state);
             message.setConversationId(Constants.ENVIRONMENT_STATE_REQUEST_CONVERSATION_ID);
             message.setReplyWith("INFORM" + System.currentTimeMillis());
