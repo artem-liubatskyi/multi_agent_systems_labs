@@ -14,7 +14,6 @@ class Navigator {
   private def defineAction(state: LabyrinthCellDescriptor): SpeleologistAction = Move
 }
 
-
 object Navigator {
   case class ActionRequest(state: LabyrinthCellDescriptor, sender: ActorRef[ActionResponse])
 

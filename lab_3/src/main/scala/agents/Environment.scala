@@ -18,7 +18,6 @@ class Environment {
         sender ! ActionResponse("ACCEPTED")
         Behaviors.same
     }
-
   })
 
   def performAction(action: SpeleologistAction): Unit = {
